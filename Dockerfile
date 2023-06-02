@@ -1,16 +1,24 @@
-FROM composer:1.9.0 as build
+FROM composer:2.3.5 as build
 WORKDIR /app
 COPY . /app
-RUN composer global require hirak/prestissimo && composer install
+RUN composer install && composer dumpautoload
+RUN php artisan optimize:clear
 
-FROM php:8.0-apache
+FROM php:8.1.0RC5-apache-buster
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    libcurl4-gnutls-dev \
+    unzip \
+    git
 RUN docker-php-ext-install pdo pdo_mysql
 
-EXPOSE 8080
+RUN chown -R www-data:www-data storage bootstrap/cache
+RUN chmod -R 775 storage bootstrap/cache
+
+EXPOSE 80
 COPY --from=build /app /var/www/
 COPY docker/000-default.conf /etc/apache2/sites-available/000-default.conf
-COPY .env.example /var/www/.env
 RUN chmod 777 -R /var/www/storage/ && \
-    echo "Listen 8080" >> /etc/apache2/ports.conf && \
-    chown -R www-data:www-data /var/www/ && \
-    a2enmod rewrite
+  echo "Listen 8080">>/etc/apache2/ports.conf && \
+  chown -R www-data:www-data /var/www/ && \
+  a2enmod rewrite
