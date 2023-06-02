@@ -12,9 +12,6 @@ RUN apt-get update && apt-get install -y \
     git
 RUN docker-php-ext-install pdo pdo_mysql
 
-RUN chown -R www-data:www-data storage bootstrap/cache
-RUN chmod -R 775 storage bootstrap/cache
-
 EXPOSE 80
 COPY --from=build /app /var/www/
 COPY docker/000-default.conf /etc/apache2/sites-available/000-default.conf
