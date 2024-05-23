@@ -15,7 +15,12 @@ RUN docker-php-ext-install pdo pdo_mysql
 EXPOSE 80
 COPY --from=build /app /var/www/
 COPY docker/000-default.conf /etc/apache2/sites-available/000-default.conf
-RUN chmod 777 -R /var/www/storage/ && \
-  echo "Listen 8080">>/etc/apache2/ports.conf && \
-  chown -R www-data:www-data /var/www/ && \
-  a2enmod rewrite
+
+# Set permissions for storage and bootstrap/cache
+RUN chmod -R 775 /var/www/storage/ && \
+    chmod -R 775 /var/www/bootstrap/cache/ && \
+    chown -R www-data:www-data /var/www/ && \
+    a2enmod rewrite && \
+    echo "Listen 8080" >> /etc/apache2/ports.conf
+
+CMD ["apache2-foreground"]
