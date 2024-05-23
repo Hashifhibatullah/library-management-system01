@@ -5,9 +5,9 @@ steps:
       - '--no-cache'
       - '-t'
       - '$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
-      - .
       - '-f'
       - Dockerfile
+      - .
     id: Build
 
   - name: gcr.io/cloud-builders/docker
@@ -16,16 +16,20 @@ steps:
       - '$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
     id: Push
 
-  - name: 'gcr.io/cloud-builders/composer'
+  - name: gcr.io/cloud-builders/composer
     args: ['install', '--no-dev']
+    id: ComposerInstall
 
-  - name: 'gcr.io/cloud-builders/php'
+  - name: gcr.io/cloud-builders/php
     entrypoint: 'bash'
     args:
       - '-c'
       - |
         php artisan key:generate
+    id: GenerateKey
+
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: gcloud
     args:
       - run
       - services
@@ -38,7 +42,6 @@ steps:
       - '--region=$_DEPLOY_REGION'
       - '--quiet'
     id: Deploy
-    entrypoint: gcloud
 
   - name: 'gcr.io/google-appengine/exec-wrapper'
     entrypoint: 'bash'
@@ -53,7 +56,7 @@ steps:
         -e CLOUD_SQL_CONNECTION_NAME=$_INSTANCE_CONNECTION_NAME \
         -e DB_DATABASE=$$DB_DATABASE \
         -e DB_USERNAME=$$DB_USERNAME \
-        -e DB_PASSWORD=$$DB_PASSWORD 
+        -e DB_PASSWORD=$$DB_PASSWORD \
         -s $_INSTANCE_CONNECTION_NAME \
         -- php /app/artisan migrate --force
     waitFor:
@@ -62,7 +65,8 @@ steps:
       - Deploy
     id: Migrate
 
-  images:
+images:
   - '$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
-  options:
-    substitutionOption: ALLOW_LOOSE
+
+options:
+  substitutionOption: ALLOW_LOOSE
